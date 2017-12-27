@@ -1,0 +1,197 @@
+<html>
+<head>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.13/semantic.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.13/semantic.min.css"/>
+  <style>
+  </style>
+</head>
+
+
+<body>
+<div id="calls">
+  <table class="ui celled table">
+  <thead>
+    <tr><th>Shortname</th>
+    <th>Talkgroup</th>
+    <th>State</th>
+    <th>Len</th>
+    <th>Encrypted</th>
+    <th>Emergency</th>
+  </tr></thead>
+  <tbody id="call-rows">
+  </tbody>
+</table>
+</div>
+
+<div class="ui divider"></div>
+<div id="rates"></div>
+<div class="ui divider"></div>
+<div id="systems"></div>
+<div class="ui divider"></div>
+<div id="sources"></div>
+
+</body>
+<script>
+function socketConnect(messageCallback){
+if (!this._socket) {
+
+    this._socket = new WebSocket("ws://localhost:3010/client"); // + startUp.backend_server); // 'wss://openmhz.com/');
+    if (typeof messageCallback === "function") {
+
+        this._socket.onmessage = messageCallback.bind(this);
+    }
+
+    this._socket.onopen = function(e) {
+        console.log('Socket Connected - sending add: ' + e);
+        this._socket.send(JSON.stringify({
+            type: 'add'
+        }));
+    }.bind(this);
+} else {
+    console.log('Socket Already Connected - sending update');
+    this._socket.send(JSON.stringify({
+        type: 'update'
+    }));
+}
+}
+
+function messageHandler(e) {
+  console.log("Got message: " + e.data);
+  try {
+    /*
+    "freq": "770468750",
+"sysNum": "0",
+"shortName": "dcfd",
+"talkgroup": "11035",
+"elasped": "38",
+"length": "38",
+"state": "0",
+"phase2": "true",
+"conventional": "false",
+"encrypted": "true",
+"emergency": "true",
+"startTime": "1504061548",
+"freqList": [
+    {
+        "freq": "770468750",
+        "time": "1504061548"
+    }
+]*/
+      var data = JSON.parse(e.data);
+      if (typeof data.type !== "undefined") {
+          if (data.type == 'status') {
+            $("#call-rows").empty();
+            for (var i = 0; i < data.calls.length; i++) {
+              var row = $("<tr><td>" + data.calls[i].shortName + "</td><td>"
+              + data.calls[i].talkgroup + "</td><td>"
+              + data.calls[i].state + "</td><td>"
+              + Math.floor(parseInt(data.calls[i].length)) + "</td><td>"
+              + data.calls[i].encrypted + "</td><td>"
+              + data.calls[i].emergency + "</td></tr>");
+
+              $("#call-rows").append(row);
+            }
+          }
+          if (data.type == 'rate') {
+            var rates = data.rates;
+            var rateHtml = $('<div class="ui bulleted list"/>');
+            for (var sys in rates) {
+                if (rates.hasOwnProperty(sys)) {
+                    rateHtml.append("<div class=item>" + sys + ": " + Math.floor(parseInt(rates[sys])) + "</div>");
+
+                }
+            }
+            $("#rates").empty();
+            $("#rates").html(rateHtml);
+          }
+          if (data.type == 'config') {
+            for (var i = 0; i < data.sources.length; i++) {
+              var sysHtml = $("<div class='source ui cards'/>");
+              var groupHtml = '<div class="ui card"><div class="content"><div class="header">System</div>' +
+              '<div class="ui bulleted list">'+
+              "<div class=item>Short Name: " + data.systems[i].shortName + "</div>" +
+              "<div class=item>System Type: " + data.systems[i].systemType + "</div>" +
+              "<div class=item>Control Channels: " + data.systems[i].channels + "</div>" +
+              "<div class=item>Talkgroup File: " + data.systems[i].talkgroupsFile + "</div>" +
+              "</div></div></div>";
+
+              sysHtml.append(groupHtml);
+
+              groupHtml = '<div class="ui card"><div class="content"><div class="header">Recording</div>' +
+              '<div class="ui bulleted list">'+
+              "<div class=item>Audio Archive: " + data.systems[i].audioArchive + "</div>" +
+              "<div class=item>Call Log: " + data.systems[i].callLog + "</div>" +
+              "<div class=item>Record Unknown: " + data.systems[i].recordUnkown + "</div>" +
+              "<div class=item>Upload Script: " + data.systems[i].uploadScript + "</div>" +
+              "</div></div></div>";
+
+              sysHtml.append(groupHtml);
+
+              $("#systems").empty();
+              $("#systems").append('<h2 class="ui header">System ' + data.systems[i].sysNum  + '</h2>');
+              $("#systems").append(sysHtml);
+            }
+            for (var i = 0; i < data.sources.length; i++) {
+              var srcHtml = $("<div class='source ui cards'/>");
+              var groupHtml = '<div class="ui card"><div class="content"><div class="header">Levels</div>' +
+              '<div class="ui bulleted list">'+
+               "<div class=item>Analog Levels: " + data.sources[i].analog_levels + "</div>" +
+              "<div class='item'>Digital Levels: " + data.sources[i].digital_levels + "</div>" +
+              "<div class='item'>Squelch DB: " + data.sources[i].squelch_db + "</div>" +
+              "<div class='item'>Silence Frames: " + data.sources[i].silence_frames + "</div>" +
+              "</div></div></div>";
+
+              srcHtml.append(groupHtml);
+
+              groupHtml = '<div class="ui card"><div class="content"><div class="header">Recorders</div>' +
+              '<div class="ui bulleted list">'+
+              "<div class='item'>Analog Recorders: " + data.sources[i].analog_recorders + "</div>" +
+              "<div class='item'>Digital Recorders: " + data.sources[i].digital_recorders + "</div>" +
+              "<div class='item'>Debug Recorders: " + data.sources[i].debug_recorders + "</div>"  +
+              "</div></div></div>";
+              srcHtml.append(groupHtml);
+
+              groupHtml = '<div class="ui card"><div class="content"><div class="header">Device and Tuning</div>' +
+              '<div class="ui bulleted list">'+
+              "<div class='item'>Driver: " + data.sources[i].driver + "</div>" +
+              "<div class='item'>Device: " + data.sources[i].device + "</div>" +
+              "<div class='item'>Antenna: " + data.sources[i].antenna + "</div>" +
+              "<div class='item'>Center Frequency (Hz): " + data.sources[i].center + "</div>" +
+              "<div class='item'>Tuning Error (Hz): " + data.sources[i].error + "</div>" +
+              "<div class='item'>Sampling Rate: " + data.sources[i].rate + "</div>" +
+              "<div class='item'>Min Tunable Freq (Hz): " + data.sources[i].min_hz + "</div>" +
+              "<div class='item'>Max Tunable Freq (Hz): " + data.sources[i].max_hz + "</div>"
+              "<div class='item'>QPSK modulation: " + data.sources[i].qpsk + "</div>"  +
+              "</div></div></div>";
+              srcHtml.append(groupHtml);
+
+              groupHtml = '<div class="ui card"><div class="content"><div class="header">Gain</div>' +
+              '<div class="ui bulleted list">'+
+              "<div class='item'>BB Gain: " + data.sources[i].bb_gain + "</div>" +
+              "<div class='item'>Gain: " + data.sources[i].gain + "</div>" +
+              "<div class='item'>IF Gain: " + data.sources[i].if_gain + "</div>" +
+              "<div class='item'>LNA Gain: " + data.sources[i].lna_gain + "</div>" +
+              "<div class='item'>Mix Gain: " + data.sources[i].mix_gain + "</div>" +
+              "</div></div></div>";
+              srcHtml.append(groupHtml);
+
+              $("#sources").empty();
+              $("#sources").append('<h2 class="ui header">Source ' + i + '</h2>');
+              $("#sources").append(srcHtml);
+            }
+          }
+      } else {
+
+      }
+    } catch (err) {
+        console.log("JSON PArsing Error: " + err);
+    }
+    console.log('Received Message: ' + e.data);
+}
+
+window.onload = function() {
+  socketConnect(messageHandler);
+}
+</script>
+</html>
