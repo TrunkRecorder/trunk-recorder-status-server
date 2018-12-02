@@ -33,10 +33,11 @@
 
 </body>
 <script>
+var stname = "";
 function socketConnect(messageCallback){
 if (!this._socket) {
 
-    this._socket = new WebSocket("ws://localhost:3010/client"); // + startUp.backend_server); // 'wss://openmhz.com/');
+    this._socket = new WebSocket("ws://172.16.3.50:3010/client"); // <- change ip // + startUp.backend_server); // 'wss://openmhz.com/');
     if (typeof messageCallback === "function") {
 
         this._socket.onmessage = messageCallback.bind(this);
@@ -80,26 +81,29 @@ function messageHandler(e) {
 ]*/
       var data = JSON.parse(e.data);
       if (typeof data.type !== "undefined") {
-          if (data.type == 'status') {
+          if (data.type == 'calls_active') {
             $("#call-rows").empty();
             for (var i = 0; i < data.calls.length; i++) {
               var row = $("<tr><td>" + data.calls[i].shortName + "</td><td>"
-              + data.calls[i].talkgroup + "</td><td>"
+              + data.calls[i].talkgroup + " : " + data.calls[i].talkgrouptag + "</td><td>"
               + data.calls[i].state + "</td><td>"
               + Math.floor(parseInt(data.calls[i].length)) + "</td><td>"
               + data.calls[i].encrypted + "</td><td>"
-              + data.calls[i].emergency + "</td></tr>");
-
+              + data.calls[i].emergency + "</td></tr>");           
               $("#call-rows").append(row);
             }
           }
-          if (data.type == 'rate') {
+          if (data.type == 'rates') {
             var rates = data.rates;
             var rateHtml = $('<div class="ui bulleted list"/>');
             for (var sys in rates) {
                 if (rates.hasOwnProperty(sys)) {
-                    rateHtml.append("<div class=item>" + sys + ": " + Math.floor(parseInt(rates[sys])) + "</div>");
-
+                    if(stname == ""){
+                        rateHtml.append("<div class=item>" + sys + ": " + Math.floor(rates[sys].decoderate) + " Mesages /s</div>");
+                    }
+                    else{
+                        rateHtml.append("<div class=item>" + stname + ": " + Math.floor(rates[sys].decoderate) + " Mesages /s </div>");
+                    }
                 }
             }
             $("#rates").empty();
@@ -107,6 +111,7 @@ function messageHandler(e) {
           }
           if (data.type == 'config') {
             for (var i = 0; i < data.sources.length; i++) {
+                stname = data.systems[i].shortName;
               var sysHtml = $("<div class='source ui cards'/>");
               var groupHtml = '<div class="ui card"><div class="content"><div class="header">System</div>' +
               '<div class="ui bulleted list">'+
