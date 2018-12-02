@@ -219,9 +219,11 @@ serverWss.on('connection', function connection(ws, req) {
                     console.log("[ " + data.type + " ] Server Live - Config rcv'd");
               } else if (data.type == 'status') {
                 console.log("[ " + data.type + " ] Server - Status message ");
-              } else if (data.type == 'rate') {
+              } else if (data.type == 'rates') {
                 console.log("[ " + data.type + " ] Server - Rate message ");
-              } else {
+              }else if (data.type == 'calls_active') {
+                console.log("[ " + data.type + " ] Server - Calls message ");
+            } else {
                 console.log("[ " + data.type + " ] Server - Uknown message type");
               }
             } else {
