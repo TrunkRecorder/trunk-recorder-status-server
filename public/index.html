@@ -60,8 +60,12 @@
 <script>
 function socketConnect(messageCallback){
 if (!this._socket) {
+    var protocol = "ws:";
+    if (window.location.protocol === "https:") {
+       protocol = "wss:";
+    }
 
-    this._socket = new WebSocket("ws://192.168.0.11:3010/client"); // + startUp.backend_server); // 'wss://openmhz.com/');
+    this._socket = new WebSocket(protocol + "//" + window.location.host +"/client");
     if (typeof messageCallback === "function") {
 
         this._socket.onmessage = messageCallback.bind(this);
