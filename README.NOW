@@ -5,10 +5,15 @@
 
    where xxx... is the IP address of the system where this server is to be run.
 
-2. `node.js` and `npm` must be installed on the system where this server is to be run.
-3. From within this directory, run `npm install` to download required modules
-4. Launch the server with `node index.js`
-5. From a web browser, connect to the interface at:
+
+2. Edit the `/public/index.html` file in this package, find the line below and change `192.168.0.11` to the same IP address above.
+
+   this._socket = new WebSocket("ws://192.168.0.11:3010/client"); // + 
+   
+3. `node.js` and `npm` must be installed on the system where this server is to be run.
+4. From within this directory, run `npm install` to download required modules
+5. Launch the server with `node index.js`
+6. From a web browser, connect to the interface at:
   
       http://xxx.xxx.xxx.xxx:3010  
 
