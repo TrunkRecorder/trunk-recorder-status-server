@@ -26,6 +26,7 @@ var bodyParser = require('body-parser');
 var channels = {};
 var clients = [];
 var srv = null;
+var rec = null;
 var stats = {};
 
 server.on('upgrade', (request, socket, head) => {
@@ -138,7 +139,6 @@ function heartbeat() {
     this.isAlive = true;
 }
 
-
 clientWss.on('connection', function connection(ws, req) {
     var client = {
         socket: ws
@@ -164,6 +164,11 @@ clientWss.on('connection', function connection(ws, req) {
                     if (srv){
                       console.log("Sending Srv config: " + srv.config);
                       ws.send(JSON.stringify(srv.config));
+                      console.log("Sent");
+                    }
+                    if (rec){
+                      console.log("Sending Recorders config: " + rec.config);
+                      ws.send(JSON.stringify(rec.config));
                       console.log("Sent");
                     }
                 }
@@ -216,13 +221,25 @@ serverWss.on('connection', function connection(ws, req) {
                         timestamp: new Date()
                     };
 
-                    console.log("[ " + data.type + " ] Server Live - Config rcv'd");
-              } else if (data.type == 'status') {
-                console.log("[ " + data.type + " ] Server - Status message ");
-              } else if (data.type == 'rate') {
-                console.log("[ " + data.type + " ] Server - Rate message ");
+                    console.log("[ " + data.type + " ] Server Live - config rcv'd");
+
+              } else if (data.type == 'calls_active') {
+                console.log("[ " + data.type + " ] Server - calls_active message ");
+              } else if (data.type == 'rates') {
+                console.log("[ " + data.type + " ] Server - rates message ");
+              } else if (data.type == 'recorders') {
+
+                    rec = {
+                        socket: ws,
+                        config: data,
+                        timestamp: new Date()
+                    };
+
+                console.log("[ " + data.type + " ] Server - recorders message ");
+              } else if (data.type == 'recorder') {
+                console.log("[ " + data.type + " ] Server - recorder message ");
               } else {
-                console.log("[ " + data.type + " ] Server - Uknown message type");
+                console.log("[ " + data.type + " ] Server - Unknown message type");
               }
             } else {
               console.log("Server - Message type not defined");
@@ -233,7 +250,7 @@ serverWss.on('connection', function connection(ws, req) {
               }
             });
         } catch (err) {
-            console.log("JSON PArsing Error: " + err);
+            console.log("JSON Parsing Error: " + err);
         }
         console.log('Received Message: ' + message);
     });
@@ -246,14 +263,11 @@ serverWss.on('connection', function connection(ws, req) {
 });
 
 
-
-
 server.listen(3010, function() {
     console.log('Web interface is available at: ' + server.address().port + '...');
-    console.log('status socket address is probably: http://localhost/server');
+    console.log('status socket address is probably: ws://localhost:' + server.address().port + '/server');
     console.log(process.env)
 });
-
 
 
 module.exports = server;
