@@ -5,9 +5,9 @@
 
    where xxx... is the IP addres of the system where this package is to be run.
 
-2. node.js and npm must be installed on the system where this pacakge is to be run.
-3. From within this directory, run 'npm install' to download the required modules
-4. Launch this server with 'node index.js'
+2. `node.js` and `npm` must be installed on the system where this pacakge is to be run.
+3. From within this directory, run `npm install` to download the required modules
+4. Launch this server with `node index.js`
 5. From a web browser, connect to the interface at:
   
       http://xxx.xxx.xxx.xxx:3010  
