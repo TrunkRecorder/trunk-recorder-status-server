@@ -9,14 +9,38 @@
 
 
 <body>
+<b>Recorders</b>
+<div id="recorders">
+  <table class="ui celled table">
+  <thead>
+    <tr><th>ID</th>
+    <th>Type</th>
+    <th>SrcNum</th>
+    <th>RecNum</th>
+    <th>Count</th>
+    <th>Duration</th>
+    <th>State</th>
+    <th>Error</th>
+    <th>Spike</th>
+  </tr></thead>
+  <tbody id="recorder-rows">
+  </tbody>
+</table>
+</div>
+
+<div class="ui divider"></div>
+<b>Active Calls</b>
 <div id="calls">
   <table class="ui celled table">
   <thead>
     <tr><th>Shortname</th>
-    <th>Talkgroup</th>
-    <th>State</th>
-    <th>Len</th>
-    <th>Encrypted</th>
+    <th>SysNum</th>
+    <th>Freq</th>
+    <th>TG</th>
+    <th>TG Tag</th>
+    <th>Len (s)</th>
+    <th>Conv</th>
+    <th>P25P2</th>
     <th>Emergency</th>
   </tr></thead>
   <tbody id="call-rows">
@@ -25,6 +49,7 @@
 </div>
 
 <div class="ui divider"></div>
+<b>SysNum: Decode rate/s</b>
 <div id="rates"></div>
 <div class="ui divider"></div>
 <div id="systems"></div>
@@ -35,8 +60,12 @@
 <script>
 function socketConnect(messageCallback){
 if (!this._socket) {
+    var protocol = "ws:";
+    if (window.location.protocol === "https:") {
+       protocol = "wss:";
+    }
 
-    this._socket = new WebSocket("ws://localhost:3010/client"); // + startUp.backend_server); // 'wss://openmhz.com/');
+    this._socket = new WebSocket(protocol + "//" + window.location.host +"/client");
     if (typeof messageCallback === "function") {
 
         this._socket.onmessage = messageCallback.bind(this);
@@ -55,6 +84,45 @@ if (!this._socket) {
     }));
 }
 }
+
+function  statusAsString(x) {
+    if (x == "0") {return "monitoring";}
+    else if (x == "1") {return "recording";}
+    else if (x == "2") {return "inactive";}
+    else if (x == "3") {return "<b>active</b>";}
+    else {return "undefined";}
+}
+
+var recArray = [];
+var recsArray = [];
+var recidx = 0;
+
+function updateRecList(data) {
+   if (data.type == "recorders") {
+      recsArray = Object.values(data.recorders);   // copy recorders object into an array
+   }
+
+   else if (data.type == "recorder") {
+      recArray = Object.values(data);   // copy recorder object into an array
+      var f = -1;      
+      for ( recidx = 0; recidx < recsArray.length; recidx++) {   // find the matching recorder
+          f = recsArray[recidx].id.indexOf(recArray[0].id);
+          console.log("* within for-loop recsArray[recidx].id " + recsArray[recidx].id);
+          console.log("* within for-loop recArray[0].id " + recArray[0].id);
+          console.log("* within for-loop recidx " + recsArray[recidx].id.indexOf(recArray[0].id));
+          if (f  > -1) break;
+      }
+
+      // update with new values
+      recsArray[recidx].count = recArray[0].count; 
+      recsArray[recidx].duration = recArray[0].duration; 
+      recsArray[recidx].state = recArray[0].state; 
+      recsArray[recidx].status_error = recArray[0].status_error; 
+      recsArray[recidx].status_spike = recArray[0].status_spike; 
+
+   }
+}
+
 
 function messageHandler(e) {
   console.log("Got message: " + e.data);
@@ -80,25 +148,45 @@ function messageHandler(e) {
 ]*/
       var data = JSON.parse(e.data);
       if (typeof data.type !== "undefined") {
-          if (data.type == 'status') {
+          if (data.type == 'calls_active') {
             $("#call-rows").empty();
             for (var i = 0; i < data.calls.length; i++) {
               var row = $("<tr><td>" + data.calls[i].shortName + "</td><td>"
+              + data.calls[i].sysNum + "</td><td>"
+              + data.calls[i].freq + "</td><td>"
               + data.calls[i].talkgroup + "</td><td>"
-              + data.calls[i].state + "</td><td>"
-              + Math.floor(parseInt(data.calls[i].length)) + "</td><td>"
-              + data.calls[i].encrypted + "</td><td>"
+              + data.calls[i].talkgrouptag + "</td><td>"
+              + Math.floor(parseFloat(data.calls[i].length)) + "</td><td>"
+              + data.calls[i].conventional + "</td><td>"
+              + data.calls[i].phase2 + "</td><td>"
               + data.calls[i].emergency + "</td></tr>");
 
               $("#call-rows").append(row);
             }
           }
-          if (data.type == 'rate') {
+          if (data.type == 'recorders' || 'recorder') {
+            updateRecList(data);
+            $("#recorder-rows").empty();
+            for (var i = 0; i <  recsArray.length; i++) {
+              var row = $("<tr><td>" + recsArray[i].id + "</td><td>"
+              + recsArray[i].type + "</td><td>"
+              + recsArray[i].srcNum + "</td><td>"
+              + recsArray[i].recNum + "</td><td>"
+              + recsArray[i].count + "</td><td>"
+              + Math.floor(parseFloat(recsArray[i].duration)) + "</td><td>"
+              + statusAsString(recsArray[i].state) + "</td><td>"
+              + recsArray[i].status_error + "</td><td>"
+              + recsArray[i].status_spike + "</td></tr>");
+
+              $("#recorder-rows").append(row);
+            }
+          }
+          if (data.type == 'rates') {
             var rates = data.rates;
             var rateHtml = $('<div class="ui bulleted list"/>');
-            for (var sys in rates) {
-                if (rates.hasOwnProperty(sys)) {
-                    rateHtml.append("<div class=item>" + sys + ": " + Math.floor(parseInt(rates[sys])) + "</div>");
+            for (var id in rates) {
+                if (rates.hasOwnProperty(id)) {
+                    rateHtml.append("<div class=item>" + id + ": " + Math.floor(parseFloat(rates[id].decoderate)) + "</div>");
 
                 }
             }
@@ -106,7 +194,11 @@ function messageHandler(e) {
             $("#rates").html(rateHtml);
           }
           if (data.type == 'config') {
-            for (var i = 0; i < data.sources.length; i++) {
+
+            $("#systems").empty();
+            $("#sources").empty();
+
+            for (var i = 0; i < data.systems.length; i++) {
               var sysHtml = $("<div class='source ui cards'/>");
               var groupHtml = '<div class="ui card"><div class="content"><div class="header">System</div>' +
               '<div class="ui bulleted list">'+
@@ -128,7 +220,6 @@ function messageHandler(e) {
 
               sysHtml.append(groupHtml);
 
-              $("#systems").empty();
               $("#systems").append('<h2 class="ui header">System ' + data.systems[i].sysNum  + '</h2>');
               $("#systems").append(sysHtml);
             }
@@ -176,7 +267,6 @@ function messageHandler(e) {
               "</div></div></div>";
               srcHtml.append(groupHtml);
 
-              $("#sources").empty();
               $("#sources").append('<h2 class="ui header">Source ' + i + '</h2>');
               $("#sources").append(srcHtml);
             }
@@ -185,7 +275,7 @@ function messageHandler(e) {
 
       }
     } catch (err) {
-        console.log("JSON PArsing Error: " + err);
+        console.log("JSON Parsing Error: " + err);
     }
     console.log('Received Message: ' + e.data);
 }
